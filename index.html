@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>桐陰祭136-4</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      font-family: sans-serif;
+    }
+    body {
+      background-image: url('宇宙.png');
+      background-size: 110% auto;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-color: #000000;
+      color: #a8ff60;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.65);
+      z-index: 0;
+    }
+    .container {
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
+      max-width: 600px;
+      width: 90%;
+      padding: 40px 30px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      text-shadow: 0 0 8px #a8ff60;
+    }
+    p {
+      font-size: 1.5rem;
+      margin: 20px 0;
+      text-shadow: 0 0 6px #a8ff60;
+    }
+    input {
+      font-size: 1.2rem;
+      padding: 12px;
+      width: 80%;
+      max-width: 400px;
+      margin-top: 20px;
+      border: 2px solid #a8ff60;
+      background-color: rgba(18, 26, 0, 0.7);
+      color: #a8ff60;
+      border-radius: 6px;
+      outline: none;
+    }
+    input::placeholder {
+      color: #7aa446;
+    }
+    input:focus {
+      border-color: #d4ff8c;
+      background-color: rgba(33, 48, 0, 0.85);
+    }
+    button {
+      font-size: 1.2rem;
+      padding: 12px 24px;
+      margin-top: 30px;
+      cursor: pointer;
+      background-color: rgba(34, 68, 0, 0.8);
+      border: 2px solid #a8ff60;
+      color: #a8ff60;
+      border-radius: 8px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #3eb800;
+      color: #000;
+      border-color: #3eb800;
+      text-shadow: none;
+    }
+    #correct-screen, #incorrect-screen {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- クイズ画面 -->
+  <div class="container" id="quiz-screen">
+    <h1>答えを入力してください</h1>
+    <p>※ひらがなで入力すること</p>
+    <input
+      type="text"
+      id="answer"
+      placeholder="ここに入力"
+      autocomplete="off"
+      onkeydown="handleKey(event)"
+    />
+    <button onclick="checkAnswer()">送信</button>
+  </div>
+
+  <!-- 正解画面 -->
+  <div class="container" id="correct-screen">
+    <h1>正解！🎉</h1>
+    <p>✅ 正解は「東京」です。</p>
+    <p>日本の首都は東京都で、政治・経済・文化の中心地です。</p>
+    <button onclick="location.reload()">もう一度やる</button>
+    <p style="font-size:0.9rem; margin-top:15px; color:#a8ff60a0;">
+      ※スペースキーでも再挑戦できます
+    </p>
+  </div>
+
+  <!-- 不正解画面 -->
+  <div class="container" id="incorrect-screen">
+    <h1>不正解…😢</h1>
+    <p>もう一度挑戦してみよう！<br>あと <span id="countdown">3</span> 秒で自動で戻ります。</p>
+  </div>
+
+  <script>
+    let autoReturnTimeout = null;
+    let countdownInterval = null;
+
+    function handleKey(event) {
+      if (event.key === "Enter") {
+        if (document.getElementById('incorrect-screen').style.display === 'block') {
+          event.preventDefault();
+          return;
+        }
+        checkAnswer();
+      }
+    }
+
+    document.addEventListener('keydown', function(event) {
+      if (document.getElementById('incorrect-screen').style.display === 'block') {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          return;
+        }
+      }
+      if (document.getElementById('correct-screen').style.display === 'block') {
+        if (event.key === ' ') {
+          event.preventDefault();
+          location.reload();
+        }
+      }
+    });
+
+    function hiraToKana(str) {
+      return str.replace(/[ぁ-ん]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+    }
+    function toHalfWidth(str) {
+      return str.replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+    }
+    function normalizeInput(str) {
+      return toHalfWidth(hiraToKana(str))
+        .replace(/\s+/g, '')
+        .toUpperCase();
+    }
+
+    function checkAnswer() {
+      const acceptableAnswers = [
+      "とうきょう"
+      ].map(normalizeInput);
+
+      const userAnswerRaw = document.getElementById("answer").value.trim();
+      const userAnswer = normalizeInput(userAnswerRaw);
+
+      document.getElementById("quiz-screen").style.display = "none";
+
+      if (autoReturnTimeout) {
+        clearTimeout(autoReturnTimeout);
+        autoReturnTimeout = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      if (acceptableAnswers.includes(userAnswer)) {
+        document.getElementById("correct-screen").style.display = "block";
+      } else {
+        document.getElementById("incorrect-screen").style.display = "block";
+        startCountdown(3);
+      }
+    }
+
+    function goBack() {
+      if (autoReturnTimeout) {
+        clearTimeout(autoReturnTimeout);
+        autoReturnTimeout = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      document.getElementById("incorrect-screen").style.display = "none";
+      document.getElementById("quiz-screen").style.display = "block";
+      const input = document.getElementById("answer");
+      input.value = "";
+      input.focus();
+    }
+
+    function startCountdown(seconds) {
+      const countdownElem = document.getElementById("countdown");
+      let remaining = seconds;
+      countdownElem.textContent = remaining;
+      countdownInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          goBack();
+        } else {
+          countdownElem.textContent = remaining;
+        }
+      }, 1000);
+    }
+  </script>
+
+</body>
+</html>
